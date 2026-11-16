@@ -1,0 +1,5 @@
+# 思考过程自动翻译：Host 半为空壳（只为让 bundle 与 Plugins 页有可见行），
+# 功能全部在 Client 半 —— client.js 覆盖 conversation.chat.reasoning.body 插槽。
+- insert:
+    - id: cot-auto-translate
+      name: 'dsh-cot-auto-translate'

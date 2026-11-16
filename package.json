@@ -1,0 +1,31 @@
+{
+  "name": "dsh-cot-auto-translate",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Auto-translate expanded thinking (reasoning) into the interface language with Microsoft Bing, keeping the original one click away",
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": ["@deepseek-ai/dsh-client-ui-chat"]
+    }
+  }
+}

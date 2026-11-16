@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Reasoning auto-translate",
+    "description": "Translates expanded reasoning into the interface language, with the original one click away. Replaces the built-in experimental translator, which cannot run on this DSH version. Translations stay in page memory; the reasoning text is sent to Microsoft Bing."
+  }
+}
