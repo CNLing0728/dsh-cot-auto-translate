@@ -1,8 +1,17 @@
 {
   "name": "dsh-cot-auto-translate",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Auto-translate expanded thinking (reasoning) into the interface language with Microsoft Bing, keeping the original one click away",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CNLing0728/dsh-cot-auto-translate.git"
+  },
+  "bugs": {
+    "url": "https://github.com/CNLing0728/dsh-cot-auto-translate/issues"
+  },
+  "homepage": "https://github.com/CNLing0728/dsh-cot-auto-translate#readme",
   "type": "module",
   "exports": {
     ".": "./index.js",
@@ -16,7 +25,8 @@
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "dsh": {
     "bundle": {

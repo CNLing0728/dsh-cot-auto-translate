@@ -50,6 +50,26 @@ window.__ModuleLoader__.load({
     /** 每个思考块记住用户选的视图：块首 96 字 -> 'translated' | 'original'。 */
     const viewMemory = new Map()
     const VIEW_MEMORY_LIMIT = 200
+    /** 首次使用前必须由用户明确同意：把展开的思考原文发送给微软翻译。 */
+    const CONSENT_KEY = 'dsh.cotAutoTranslate.consent.v1'
+
+    /**
+     * 读取用户对「思考原文会发送给 Microsoft Bing」的授权状态。
+     * @returns 'granted'、'declined'，或从未选择过的 'unset'。
+     */
+    function readConsent() {
+      try {
+        const value = window.localStorage.getItem(CONSENT_KEY)
+        return value === 'granted' || value === 'declined' ? value : 'unset'
+      } catch (_unavailable) {
+        return 'unset'
+      }
+    }
+
+    /** 记住用户的选择；存储不可用时只影响下次打开是否再问。 */
+    function writeConsent(value) {
+      try { window.localStorage.setItem(CONSENT_KEY, value) } catch (_unavailable) { /* storage disabled */ }
+    }
 
     const dicts = {
       zh: {
@@ -144,6 +164,67 @@ window.__ModuleLoader__.load({
       },
     }
 
+    /**
+     * 首次使用前的隐私告知文案：展开的思考原文会交给微软翻译服务，
+     * 必须由用户点「启用翻译」后才开始发送任何内容。
+     */
+    const consentDicts = {
+      zh: {
+        consentNotice: '展开思考的原文会发送给 Microsoft Bing 翻译，用于生成译文；模型上下文和聊天记录不受影响。',
+        enableTranslation: '启用翻译',
+        keepOriginal: '保持原文',
+        consentOff: '自动翻译已关闭',
+      },
+      en: {
+        consentNotice: 'Expanded reasoning text is sent to Microsoft Bing to produce the translation. The model context and chat history are unaffected.',
+        enableTranslation: 'Enable translation',
+        keepOriginal: 'Keep original',
+        consentOff: 'Auto-translation is off',
+      },
+      ja: {
+        consentNotice: '展開した思考の原文は翻訳のため Microsoft Bing に送信されます。モデルの文脈とチャット履歴は変更されません。',
+        enableTranslation: '翻訳を有効化',
+        keepOriginal: '原文のまま',
+        consentOff: '自動翻訳はオフです',
+      },
+      ko: {
+        consentNotice: '펼친 사고의 원문은 번역을 위해 Microsoft Bing으로 전송됩니다. 모델 컨텍스트와 채팅 기록은 바뀌지 않습니다.',
+        enableTranslation: '번역 사용',
+        keepOriginal: '원문 유지',
+        consentOff: '자동 번역이 꺼져 있습니다',
+      },
+      ru: {
+        consentNotice: 'Раскрытый текст рассуждений отправляется в Microsoft Bing для перевода. Контекст модели и история чата не меняются.',
+        enableTranslation: 'Включить перевод',
+        keepOriginal: 'Оставить оригинал',
+        consentOff: 'Автоперевод выключен',
+      },
+      fr: {
+        consentNotice: 'Le texte de raisonnement est envoyé à Microsoft Bing pour la traduction. Le contexte du modèle et l’historique restent inchangés.',
+        enableTranslation: 'Activer la traduction',
+        keepOriginal: 'Garder l’original',
+        consentOff: 'Traduction automatique désactivée',
+      },
+      de: {
+        consentNotice: 'Der Denktext wird zur Übersetzung an Microsoft Bing gesendet. Modellkontext und Chatverlauf bleiben unverändert.',
+        enableTranslation: 'Übersetzung aktivieren',
+        keepOriginal: 'Original behalten',
+        consentOff: 'Automatische Übersetzung ist aus',
+      },
+      es: {
+        consentNotice: 'El texto del razonamiento se envía a Microsoft Bing para traducirlo. El contexto del modelo y el historial no cambian.',
+        enableTranslation: 'Activar traducción',
+        keepOriginal: 'Mantener original',
+        consentOff: 'La traducción automática está desactivada',
+      },
+      pt: {
+        consentNotice: 'O texto do raciocínio é enviado ao Microsoft Bing para tradução. O contexto do modelo e o histórico não mudam.',
+        enableTranslation: 'Ativar tradução',
+        keepOriginal: 'Manter original',
+        consentOff: 'A tradução automática está desativada',
+      },
+    }
+
     const css = `
       .cot-auto { display: flex; flex-direction: column; gap: 6px; }
       .cot-auto__toolbar {
@@ -168,6 +249,12 @@ window.__ModuleLoader__.load({
       .cot-auto__badge, .cot-auto__status {
         font-size: var(--dsh-content-font-size-secondary, 12px);
         color: var(--dsw-alias-label-secondary);
+      }
+      .cot-auto__consent {
+        font-size: var(--dsh-content-font-size-secondary, 12px);
+        line-height: 18px;
+        color: var(--dsw-alias-label-secondary);
+        max-width: 46em;
       }
       .cot-auto__error {
         font-size: var(--dsh-content-font-size-secondary, 12px);
@@ -346,6 +433,13 @@ window.__ModuleLoader__.load({
       const [busy, setBusy] = useState(0)
       const [failure, setFailure] = useState(null)
       const [attempt, setAttempt] = useState(0)
+      // 首次使用前必须明确同意：在用户点「启用翻译」之前，不发送任何思考文本。
+      const [consent, setConsent] = useState(() => readConsent())
+      const granted = consent === 'granted'
+      const decide = (value) => {
+        writeConsent(value)
+        setConsent(value)
+      }
 
       // 流式尾巴在「停稳」一会儿之后也当作完整段落翻译：模型思考到一半时停顿时，
       // 已经写出的最后一段不该一直停在原文。快速连续出字时不断重置计时。
@@ -394,7 +488,7 @@ window.__ModuleLoader__.load({
       const abortRef = useRef(null)
 
       useEffect(() => {
-        if (view !== 'translated') return undefined
+        if (view !== 'translated' || !granted) return undefined
         const controller = new AbortController()
         abortRef.current = controller
         let alive = true
@@ -448,7 +542,7 @@ window.__ModuleLoader__.load({
         }
         // settledKey 是 units 的稳定摘要；revision 只影响渲染，不重新排队请求。
         // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, [settledKey, target, view, attempt])
+      }, [settledKey, target, view, attempt, granted])
 
       /** 译文正文：已翻段落用译文，未翻或流式尾巴保持原文。 */
       const translatedText = useMemo(() => {
@@ -471,8 +565,8 @@ window.__ModuleLoader__.load({
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [units, target, revision])
 
-      const showTranslated = view === 'translated' && failure === null && anyTranslation
-      const showToolbar = anyTranslation || busy > 0 || failure !== null
+      const showTranslated = granted && view === 'translated' && failure === null && anyTranslation
+      const showToolbar = !granted || anyTranslation || busy > 0 || failure !== null
       const toggleView = () => {
         const next = view === 'original' ? 'translated' : 'original'
         setViewState(next)
@@ -491,6 +585,39 @@ window.__ModuleLoader__.load({
         )
         : null
 
+      /** 未授权时只显示隐私告知与两个选择，点击前不发送任何思考文本。 */
+      const consentRow = !granted
+        ? [
+          h(
+            'span',
+            { className: 'cot-auto__consent', key: 'notice' },
+            consent === 'unset' ? t('consentNotice') : t('consentOff'),
+          ),
+          h(
+            'button',
+            {
+              type: 'button',
+              key: 'enable',
+              className: 'cot-auto__toggle',
+              onClick: () => decide('granted'),
+            },
+            t('enableTranslation'),
+          ),
+          consent === 'unset'
+            ? h(
+              'button',
+              {
+                type: 'button',
+                key: 'keep',
+                className: 'cot-auto__retry',
+                onClick: () => decide('declined'),
+              },
+              t('keepOriginal'),
+            )
+            : null,
+        ]
+        : []
+
       return h(
         'div',
         {
@@ -498,13 +625,15 @@ window.__ModuleLoader__.load({
           'data-cot-auto-translate': 'true',
           'data-cot-auto-view': showTranslated ? 'translated' : 'original',
           'data-cot-auto-state': failure !== null ? 'failed' : busy > 0 ? 'pending' : 'ready',
+          'data-cot-auto-consent': consent,
         },
         h('style', null, css),
         showToolbar
           ? h(
             'div',
             { className: 'cot-auto__toolbar', role: 'group', 'aria-label': t('groupLabel') },
-            anyTranslation && failure === null
+            ...consentRow,
+            granted && anyTranslation && failure === null
               ? h(
                 'button',
                 { type: 'button', className: 'cot-auto__toggle', onClick: toggleView },
@@ -545,7 +674,10 @@ window.__ModuleLoader__.load({
       inject: ['slots', 'locale'],
       apply(ctx) {
         ctx.effect(() => {
-          const disposers = Object.entries(dicts).map(([id, dict]) => ctx.locale.register(NS, id, dict))
+          const disposers = Object.entries(dicts).map(([id, dict]) => ctx.locale.register(NS, id, {
+            ...dict,
+            ...(consentDicts[id] ?? consentDicts.en),
+          }))
           return () => { for (const dispose of disposers) dispose() }
         })
         const t = ctx.locale.bind(NS)

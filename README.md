@@ -1,7 +1,11 @@
-﻿# 思考过程自动翻译（Reasoning auto-translate）
+# 思考过程自动翻译（Reasoning auto-translate）
 
 展开模型的思考（reasoning）时，自动把它翻译成界面语言；中文界面译为简体中文。译文默认直接显示，
 工具栏里一键切回原文。翻译只发生在浏览器这一侧，不写入 Session 日志，也不改变模型上下文。
+
+**首次使用会先征求同意**：第一次展开思考时只显示一条隐私提示和「启用翻译 / 保持原文」两个按钮，
+在你点「启用翻译」之前，任何思考文本都不会被发送出去。选择记在浏览器本地（localStorage 键
+`dsh.cotAutoTranslate.consent.v1`）；清除这个键就会重新询问。
 
 ## 安装
 
@@ -13,9 +17,10 @@
 
 1. 在插件面板启用本插件（启用后立即生效，不需要重启）。
 2. 在任意会话里点开思考块（「已思考 …」那一行展开）。
-3. 正文默认显示译文；顶部工具栏的「查看原文 / 查看译文」可以随时切换，切换按思考块记住
+3. 首次展开先出现隐私提示：读过后点「启用翻译」开始翻译，或点「保持原文」关闭自动翻译。
+4. 之后正文默认显示译文；顶部工具栏的「查看原文 / 查看译文」可以随时切换，切换按思考块记住
    （折叠再展开不会被重置）；「机器翻译」角标只出现在译文视图，鼠标悬停说明译文来源。
-4. 正在流式输出的最后一段保持原文，已完成的段落先翻译；流式尾巴停顿约 1.2 秒后也会一起翻。
+5. 正在流式输出的最后一段保持原文，已完成的段落先翻译；流式尾巴停顿约 1.2 秒后也会一起翻。
    工具栏同时显示「已翻 / 总段数」进度。失败时显示原文，提示「翻译暂不可用，当前显示原文」
    并给出「重试」；代码围栏内的内容不送翻。
 
@@ -40,11 +45,16 @@ DSH 带一个实验特性「思考过程机器翻译」（`@deepseek-ai/dsh-expe
 ## 限制与注意
 
 - 译文只存在于当前页面内存：刷新或重开会话后重新翻译（会重新发请求）。
-- 翻译会把展开的思考正文发送给 Microsoft 的翻译端点；涉及敏感内容时请切回原文或停用插件。
+- 翻译会把展开的思考正文发送给 Microsoft 的翻译端点；只有你点了「启用翻译」才会开始发送，
+  涉及敏感内容时请切回原文或停用插件。
 - Microsoft 的匿名翻译端点没有第三方 API 保证，可能限流或改变响应格式；失败时插件保留原文，
   不会影响阅读。中国大陆网络的可达性随网络环境而定（本插件在本机已实测可用）。
 - 被改写过的 Markdown（链接、代码块）可能变形；原文始终可切回。
 - 目标语言跟随界面语言，插件不提供单选控件。
+
+## 许可证
+
+MIT，见 [LICENSE](LICENSE)。仓库：https://github.com/CNLing0728/dsh-cot-auto-translate
 
 ---
 
@@ -54,12 +64,17 @@ While a reasoning disclosure is expanded, its text is automatically translated i
 language. Chinese interfaces get Simplified Chinese. The original is always one click away, and the
 translation lives only in the page: the Session log and the model context are untouched.
 
+**First use asks for consent.** The first expanded reasoning block shows only a privacy notice with
+“Enable translation” and “Keep original”. Until you enable it, no reasoning text is sent anywhere. The
+choice is stored in the browser (localStorage key `dsh.cotAutoTranslate.consent.v1`); clearing that key
+asks again.
+
 ## Usage
 
-Enable the plugin in the Plugins panel, expand any reasoning block, and the body defaults to the
-translation; the toolbar above it switches between translation and original at any time. The still
-streaming tail stays original while finished paragraphs are translated first. On failure the original
-stays visible with a Retry action.
+Enable the plugin in the Plugins panel, expand any reasoning block, and confirm the first-use privacy
+notice. Afterwards the body defaults to the translation; the toolbar above it switches between
+translation and original at any time. The still streaming tail stays original while finished
+paragraphs are translated first. On failure the original stays visible with a Retry action.
 
 The target language follows the interface language (`zh`/`zh-CN`/`zh-Hans` → Simplified Chinese,
 `zh-TW`/`zh-HK` → Traditional Chinese, other locales use their language code). Chinese reasoning is
@@ -81,8 +96,12 @@ not sent when the target is Chinese.
 ## Limitations
 
 - Translations are page-memory only: reloading the page or reopening a Session translates again.
-- The displayed reasoning text is sent to Microsoft's translation endpoint. Disable the plugin or use
-  the original view for sensitive content.
+- The displayed reasoning text is sent to Microsoft's translation endpoint, and only after the
+  first-use consent. Disable the plugin or use the original view for sensitive content.
 - The anonymous endpoint has no third-party API guarantee: it may rate-limit or change its response
   format. Failures keep the original text.
 - Markdown links and code fences may be altered; the original is always available.
+
+## License
+
+MIT — see [LICENSE](LICENSE). Repository: https://github.com/CNLing0728/dsh-cot-auto-translate
